@@ -7,11 +7,12 @@ import GUI from 'lil-gui';
 //CONSTANT & VARIABLES
 let width = window.innerWidth;
 let height = window.innerHeight;
+
 //-- GUI PARAMETERS
 var gui;
 const parameters = {
-  resolutionX: 3,
-  rotationX: 100
+  InputRadius: 5,
+  RecursionDepth: 5
 }
 
 //-- SCENE VARIABLES
@@ -25,19 +26,18 @@ var directionalLight;
 
 //-- GEOMETRY PARAMETERS
 //Create an empty array for storing all the cubes
-let sceneCubes = [];
-let resX = parameters.resolutionX;
-let rotX = parameters.rotationX;
+let inputRadius = parameters.InputRadius;
+let recursionDepth = parameters.RecursionDepth;
 
 function main(){
   //GUI
   gui = new GUI;
-  gui.add(parameters, 'resolutionX', 1, 10, 1);
-  gui.add(parameters, 'rotationX', 0, 180);
+  gui.add(parameters, 'InputRadius', 1, 10, 0.1);
+  gui.add(parameters, 'RecursionDepth', 1, 10, 1);
 
   //CREATE SCENE AND CAMERA
   scene = new THREE.Scene();
-  camera = new THREE.PerspectiveCamera( 15, width / height, 0.1, 100);
+  camera = new THREE.PerspectiveCamera( 15, width / height, 0.1, 1000);
   camera.position.set(10, 10, 10)
 
   //LIGHTINGS
@@ -51,9 +51,13 @@ function main(){
   scene.add(directionalLight.target);
 
   //GEOMETRY INITIATION
-  // Initiate first cubes
-  createCubes();
-  rotateCubes();
+  // Create circles here
+
+  var circles = generateCircles(0, 0, 0, 5, 7);
+  console.log(circles);
+
+  circles.forEach((element) => scene.add(element.lineRepresentation));
+
 
   //RESPONSIVE WINDOW
   window.addEventListener('resize', handleResize);
@@ -76,32 +80,6 @@ function main(){
 //HELPER FUNCTIONS
 //-----------------------------------------------------------------------------------
 //GEOMETRY FUNCTIONS
-// Create Cubes
-function createCubes(){
-  for(let i=0; i<resX; i++){
-    const geometry = new THREE.BoxGeometry(0.1, 1,1);
-    const material = new THREE.MeshPhysicalMaterial();
-    material.color = new THREE.Color(0xffffff);
-    material.color.setRGB(0,0,Math.random());
-
-    const cube = new THREE.Mesh(geometry, material);
-    cube.position.set(i*0.1, 0, 0);
-    cube.name = "cube " + i;
-    sceneCubes.push(cube);
-
-    scene.add(cube);
-  }
-}
-
-//Rotate Cubes
-function rotateCubes(){
-  sceneCubes.forEach((element, index)=>{
-    let scene_cube = scene.getObjectByName(element.name);
-    let radian_rot = (index*(rotX/resX)) * (Math.PI/180);
-    scene_cube.rotation.set(radian_rot, 0, 0)
-    rotX = parameters.rotationX;
-  })
-}
 
 //Remove 3D Objects and clean the caches
 function removeObject(sceneObject){
@@ -118,22 +96,8 @@ function removeObject(sceneObject){
         sceneObject.material.dispose();
     }
   }
-
   //Remove object from scene
   sceneObject.removeFromParent();
-}
-
-//Remove the cubes
-function removeCubes(){
-  resX = parameters.resolutionX;
-  rotX = parameters.rotationX;
-
-  sceneCubes.forEach(element =>{
-    let scene_cube = scene.getObjectByName(element.name);
-    removeObject(scene_cube);
-  })
-
-  sceneCubes = [];
 }
 
 //RESPONSIVE
@@ -146,29 +110,68 @@ function handleResize() {
   renderer.render(scene, camera);
 }
 
-
 //ANIMATE AND RENDER
 function animate() {
 	requestAnimationFrame( animate );
  
   control.update();
 
-  if(resX != parameters.resolutionX){
-    removeCubes();
-    createCubes();
-    rotateCubes();
+  if(inputRadius != parameters.InputRadius){
   }
 
-  if (rotX != parameters.rotationX){
-    rotateCubes();
+  if (recursionDepth != parameters.RecursionDepth){
   }
  
 	renderer.render( scene, camera );
 }
+
+function generateCircles(x,y,z, radius, depth){
+  if(depth === 0) return [];
+
+  // create Circles
+  const currentCircle = new Circle(x, y, z, radius);
+  
+  // Recursion
+  const leftCircles = generateCircles(x - radius, y, z, radius/2, depth - 1);
+  const rightCircles = generateCircles(x + radius, y, z, radius/2, depth - 1);
+
+  return[currentCircle, ...leftCircles, ...rightCircles];
+}
+
 //-----------------------------------------------------------------------------------
 // CLASS
 //-----------------------------------------------------------------------------------
+class Circle {
+  constructor(centerX, centerY, centerZ, radius) {
+      this.centerX = centerX;
+      this.centerY = centerY;
+      this.centerZ = centerZ;
+      this.radius = radius;
+      this.points = this.generatePoints();
+      this.geometry = new THREE.BufferGeometry().setFromPoints(this.points);
+      this.material = new THREE.LineBasicMaterial({
+        color: 0x0000ff,
+        linewidth: 1
+        });
+      this.lineRepresentation = this.drawCircle(this.geometry,this.material);
+  }
 
+  generatePoints() {
+      const points = [];
+      for (let i = 0; i < 100; i++) {
+          // Divide the circle into 100 segments
+          const theta = (2 * Math.PI / 100) * i;
+          const x = this.centerX + this.radius * Math.cos(theta);
+          const y = this.centerY + this.radius * Math.sin(theta);
+          const z = this.centerZ;
+          points.push(new THREE.Vector3(x,y,z));
+      }
+      return points;
+  }
+  drawCircle(geometry,material){
+    return new THREE.LineLoop(geometry, material);
+  }
+}
 
 //-----------------------------------------------------------------------------------
 // EXECUTE MAIN 

@@ -1,6 +1,5 @@
 {
-  "name": "tutorial_three_parametric",
-  "homepage": "https://zuardinakbar.github.io/threejs_parametric/",
+  "name": "CCA02_Recursive_Circle_Fractal",
   "private": true,
   "version": "0.0.0",
   "type": "module",
